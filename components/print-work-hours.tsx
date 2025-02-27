@@ -40,12 +40,12 @@ export const PrintWorkHours = React.forwardRef<HTMLDivElement, PrintWorkHoursPro
 
         <table className="text-sm w-full border-collapse">
           <thead>
-            <tr className="bg-gray-50">
-              <th className="border px-2 py-1 text-left">Fecha</th>
-              <th className="border px-2 py-1 text-left">Número de horas</th>
-              <th className="border px-2 py-1 text-left">Inicio de los trabajos</th>
-              <th className="border px-2 py-1 text-left">Fin de los trabajos</th>
-              <th className="border px-2 py-1 text-left">Firma</th>
+            <tr className="bg-gray-200">
+              <th className="border border-gray-400   px-2 py-1 text-left">Fecha</th>
+              <th className="border border-gray-400   px-2 py-1 text-left">Número de horas</th>
+              <th className="border border-gray-400   px-2 py-1 text-left">Inicio de los trabajos</th>
+              <th className="border border-gray-400   px-2 py-1 text-left">Fin de los trabajos</th>
+              <th className="border border-gray-400   px-2 py-1 text-left">Firma</th>
             </tr>
           </thead>
           <tbody>
@@ -54,15 +54,15 @@ export const PrintWorkHours = React.forwardRef<HTMLDivElement, PrintWorkHoursPro
 
               return (
                 <tr key={format(day, "yyyy-MM-dd")}>
-                  <td className="border px-2 py-1">{format(day, "dd.MM.yyyy")}</td>
-                  <td className="border px-2 py-1">{workDay?.total_hours ? `${workDay.total_hours}h` : "-"}</td>
-                  <td className="border px-2 py-1">
+                  <td className="border border-gray-400   px-2 py-1">{format(day, "dd.MM.yyyy")}</td>
+                  <td className="border border-gray-400   px-2 py-1">{workDay?.total_hours ? `${workDay.total_hours}h` : "-"}</td>
+                  <td className="border border-gray-400   px-2 py-1">
                     {workDay?.start_time ? format(new Date(`2000-01-01T${workDay.start_time}`), "HH:mm") : "-"}
                   </td>
-                  <td className="border px-2 py-1">
+                  <td className="border border-gray-400   px-2 py-1">
                     {workDay?.end_time ? format(new Date(`2000-01-01T${workDay.end_time}`), "HH:mm") : "-"}
                   </td>
-                  <td className="border px-2 py-1">
+                  <td className="border border-gray-400   px-2 py-1">
                     
                   </td>
                 </tr>
@@ -70,10 +70,10 @@ export const PrintWorkHours = React.forwardRef<HTMLDivElement, PrintWorkHoursPro
             })}
           </tbody>
           <tfoot>
-            <tr className="font-bold bg-gray-50">
-              <td className="border px-2 py-1">Total:</td>
-              <td className="border px-2 py-1">{workHours.reduce((sum, wh) => sum + (wh.total_hours || 0), 0)}h</td>
-              <td className="border px-2 py-1" colSpan={3}></td>
+            <tr className="font-bold bg-gray-200">
+              <td className="border border-gray-400   px-2 py-1">Total:</td>
+              <td className="border border-gray-400   px-2 py-1">{workHours.reduce((sum, wh) => sum + (wh.total_hours || 0), 0)}h</td>
+              <td className="border border-gray-400   px-2 py-1" colSpan={3}></td>
             </tr>
           </tfoot>
         </table>
