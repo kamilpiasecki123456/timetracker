@@ -8,11 +8,11 @@ import type { Database } from "@/types/database.types"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { addMonths, format, startOfMonth, subMonths, endOfMonth } from "date-fns"
+import { format } from "date-fns"
 import { es, pl } from "date-fns/locale"
-import { ArrowLeft, ChevronLeft, ChevronRight, PencilLine } from "lucide-react"
+import { ArrowLeft, CalendarIcon,  PencilLine, Printer } from "lucide-react"
 import Link from "next/link"
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 import { useRouter } from "next/navigation"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -21,6 +21,11 @@ import { Input } from "@/components/ui/input"
 import { updateWorkHours } from "@/lib/actions/work-hours"
 import { useToast } from "@/components/ui/use-toast"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Calendar } from "@/components/ui/calendar"
+import { cn } from "@/lib/utils"
+import { PrintWorkHours } from "@/components/print-work-hours"
+import { useReactToPrint } from "react-to-print"
 
 type WorkHour = Database["public"]["Tables"]["work_hours"]["Row"]
 type User = Database["public"]["Tables"]["users"]["Row"]
@@ -37,7 +42,10 @@ interface EmployeeDetailsClientProps {
     expectedHours: number
     averageHours: number
   }
-  selectedMonth: Date
+  dateRange: {
+    from: Date
+    to: Date
+  }
 }
 
 const CustomTooltip = ({ active, payload, onEdit }) => {
@@ -70,8 +78,15 @@ const CustomTooltip = ({ active, payload, onEdit }) => {
   )
 }
 
-export function EmployeeDetailsClient({ employee, workHours, offices, statistics, selectedMonth }: EmployeeDetailsClientProps) {
-  const [currentMonth, setCurrentMonth] = useState<Date>(selectedMonth)
+type DateRange = { from: Date, to: Date }
+
+export function EmployeeDetailsClient({ employee, workHours, offices, statistics, dateRange }: EmployeeDetailsClientProps) {
+  const printComponentRef = useRef<HTMLDivElement>(null)
+
+  const [date, setDate] = useState<DateRange | undefined>({
+    from: dateRange.from,
+    to: dateRange.to,
+  })
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingDate, setEditingDate] = useState("")
   const [editingWorkHourId, setEditingWorkHourId] = useState("")
@@ -81,18 +96,16 @@ export function EmployeeDetailsClient({ employee, workHours, offices, statistics
   const router = useRouter()
   const { toast } = useToast()
 
-  const handlePreviousMonth = () => {
-    const newDate = subMonths(currentMonth, 1)
-    setCurrentMonth(newDate)
-    router.push(`/admin/${employee.id}?month=${format(newDate, "yyyy-MM-dd")}`)
-  }
+  const handlePrint = useReactToPrint({
+    contentRef: printComponentRef,
+    documentTitle: `Rejestr godzin - ${employee.full_name}`,
+  })
 
-  const handleNextMonth = () => {
-    const newDate = addMonths(currentMonth, 1)
-    // Nie pozwól na wybór przyszłego miesiąca
-    if (newDate > new Date()) return
-    setCurrentMonth(newDate)
-    router.push(`/admin/${employee.id}?month=${format(newDate, "yyyy-MM-dd")}`)
+  const handleDateRangeSelect = (range: DateRange | undefined) => {
+    if (range?.from && range?.to) {
+      setDate(range)
+      router.push(`/admin/${employee.id}?from=${format(range.from, "yyyy-MM-dd")}&to=${format(range.to, "yyyy-MM-dd")}`)
+    }
   }
 
   const handleEdit = (date: string, startTime: string | null, endTime: string | null, workHourId: string | null, officeId: string) => {
@@ -161,12 +174,12 @@ export function EmployeeDetailsClient({ employee, workHours, offices, statistics
 
   // Generowanie danych dla wykresu
   const generateChartData = () => {
-    const firstDayOfMonth = startOfMonth(currentMonth)
-    const lastDayOfMonth = endOfMonth(currentMonth)
+    if (!date?.from || !date?.to) return []
+    
     const days = []
-    const currentDate = new Date(firstDayOfMonth)
+    const currentDate = new Date(date.from)
 
-    while (currentDate <= lastDayOfMonth) {
+    while (currentDate <= date.to) {
       const workEntry = workHours.find((entry) => entry.date === format(currentDate, "yyyy-MM-dd"))
 
       days.push({
@@ -197,27 +210,57 @@ export function EmployeeDetailsClient({ employee, workHours, offices, statistics
               Volver a la lista de empleados
             </Button>
           </Link>
-          <div className="flex flex-col md:flex-row items-start md:items-center gap-4 justify-between">
+          <div className="flex items-center justify-between">
             <div className="flex flex-col gap-2">
               <h1 className="text-2xl font-bold">{employee.full_name}</h1>
               <p className="text-muted-foreground">{employee.email}</p>
             </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="icon" onClick={handlePreviousMonth}>
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <p className="min-w-[120px] text-center font-medium">
-                {format(currentMonth, "LLLL yyyy", { locale: es })}
-              </p>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={handleNextMonth}
-                disabled={addMonths(currentMonth, 1) > new Date()}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn("justify-start text-left font-normal", !date && "text-muted-foreground")}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {date?.from ? (
+                    date.to ? (
+                      <>
+                        {format(date.from, "LLL dd, y", { locale: es })} -{" "}
+                        {format(date.to, "LLL dd, y", { locale: es })}
+                      </>
+                    ) : (
+                      format(date.from, "LLL dd, y", { locale: es })
+                    )
+                  ) : (
+                    <span>Seleccione un intervalo de fechas</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <Calendar
+                  initialFocus
+                  mode="range"
+                  defaultMonth={date?.from}
+                  selected={date}
+                  onSelect={(newDate) => {
+                    // Reset zakresu przy wyborze nowej daty początkowej
+                    if (newDate?.from && (!date?.from || newDate.from !== date.from)) {
+                      setDate({ from: newDate.from, to: undefined })
+                      router.push(`/admin/${employee.id}?from=${format(newDate.from, "yyyy-MM-dd")}`)
+                    }
+                    // Ustaw datę końcową tylko jeśli jest wybrana data początkowa
+                    else if (newDate?.to && date?.from) {
+                      setDate({ from: date.from, to: newDate.to })
+                      router.push(
+                        `/admin/${employee.id}?from=${format(date.from, "yyyy-MM-dd")}&to=${format(newDate.to, "yyyy-MM-dd")}`,
+                      )
+                    }
+                  }}
+                  numberOfMonths={2}
+                  locale={es}
+                />
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
 
@@ -281,9 +324,15 @@ export function EmployeeDetailsClient({ employee, workHours, offices, statistics
 
           {/* Tabela */}
           <Card className="overflow-auto">
-            <CardHeader>
+            <CardHeader className="flex flex-row justify-between">
+              <div>
               <CardTitle>Historial laboral</CardTitle>
               <CardDescription>Lista detallada de horas</CardDescription>
+              </div>
+              <Button variant="outline" size="sm" onClick={handlePrint}>
+                <Printer className="w-4 h-4 mr-2" />
+                Imprimir
+              </Button>
             </CardHeader>
             <CardContent>
               <Table>
@@ -325,6 +374,19 @@ export function EmployeeDetailsClient({ employee, workHours, offices, statistics
               </Table>
             </CardContent>
           </Card>
+        </div>
+
+        <div className="hidden">
+          <PrintWorkHours
+            ref={printComponentRef}
+            employeeName={employee.full_name}
+            workHours={workHours}
+            dateRange={{
+              from: date?.from || new Date(),
+              to: date?.to || new Date(),
+            }}
+            offices={offices}
+          />
         </div>
 
         {/* Dialog do edycji godzin */}

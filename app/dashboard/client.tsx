@@ -17,7 +17,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
-import { addMonths, format, startOfMonth, endOfMonth, subMonths, isSameMonth } from "date-fns"
+import { addMonths, format, startOfMonth, endOfMonth, subMonths, isSameMonth, isWithinInterval, startOfDay, subDays, endOfDay } from "date-fns"
 import { es } from "date-fns/locale"
 import { ChevronLeft, ChevronRight, Clock, LogOut, PencilLine, UserCog } from "lucide-react"
 import { useRouter } from "next/navigation"
@@ -369,6 +369,23 @@ export function DashboardClient({ user, workHours, todayWorkHours, statistics, s
                               required
                             />
                           </div>
+                          <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="end-time" className="text-right">
+                              Localización
+                            </Label>
+                            <Select  required value={selectedOfficeId} onValueChange={(value) => setSelectedOfficeId(value)}>
+                              <SelectTrigger className="col-span-3">
+                                <SelectValue placeholder="Localización" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {offices.map((office) => (
+                                  <SelectItem key={office.id} value={office.id}>
+                                    {office.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
                         <DialogFooter>
                           <Button type="submit">Guardar cambios</Button>
@@ -576,7 +593,10 @@ export function DashboardClient({ user, workHours, todayWorkHours, statistics, s
                         <TableCell>{day.hours}h</TableCell>
                         <TableCell>{offices.find((office) => office.id === day.officeId)?.name ?? "null"}</TableCell>
                         <TableCell className="text-right">
-                          {isSameMonth(new Date(day.date), new Date()) && (
+                          {isWithinInterval(new Date(day.date), {
+                            start: startOfDay(subDays(new Date(), 30)),
+                            end: endOfDay(new Date())
+                          }) && (
                             <Button
                               variant="ghost"
                               size="sm"

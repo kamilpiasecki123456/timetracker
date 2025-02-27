@@ -8,7 +8,7 @@ export default async function EmployeeDetailsPage({
   searchParams,
 }: {
   params: { id: string }
-  searchParams: { month?: string }
+  searchParams: { from?: string; to?: string }
 }) {
   const supabase = createClient()
 
@@ -35,16 +35,15 @@ export default async function EmployeeDetailsPage({
   }
 
   // Get selected month's work hours
-  const selectedDate = searchParams.month ? new Date(searchParams.month) : new Date()
-  const monthStart = startOfMonth(selectedDate)
-  const monthEnd = endOfMonth(selectedDate)
+  const fromDate = searchParams.from ? new Date(searchParams.from) : startOfMonth(new Date())
+  const toDate = searchParams.to ? new Date(searchParams.to) : endOfMonth(new Date())
 
   const { data: workHours } = await supabase
     .from("work_hours")
     .select("*")
     .eq("user_id", params.id)
-    .gte("date", format(monthStart, "yyyy-MM-dd"))
-    .lte("date", format(monthEnd, "yyyy-MM-dd"))
+    .gte("date", format(fromDate, "yyyy-MM-dd"))
+    .lte("date", format(toDate, "yyyy-MM-dd"))
     .order("date", { ascending: true })
 
   // Calculate statistics for selected month
@@ -69,7 +68,10 @@ export default async function EmployeeDetailsPage({
         expectedHours,
         averageHours: daysWorked ? totalHours / daysWorked : 0,
       }}
-      selectedMonth={selectedDate}
+      dateRange={{
+        from: fromDate,
+        to: toDate,
+      }}
     />
   )
 }
