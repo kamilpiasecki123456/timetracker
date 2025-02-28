@@ -357,9 +357,9 @@ export function EmployeeDetailsClient({ employee, workHours, offices, statistics
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Data</TableHead>
-                    <TableHead>Sesje</TableHead>
-                    <TableHead className="text-right">Przepracowane Godziny</TableHead>
+                    <TableHead>Fecha</TableHead>
+                    <TableHead>Sesiones</TableHead>
+                    <TableHead className="text-right">Horas trabajadas</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

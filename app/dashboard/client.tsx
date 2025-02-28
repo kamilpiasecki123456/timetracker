@@ -87,8 +87,8 @@ export function DashboardClient({ user, workHours, todayWorkHours, statistics, s
           throw new Error(result.error)
         }
         toast({
-          title: "Rozpoczęto pracę",
-          description: `Czas rozpoczęcia: ${format(new Date(), "HH:mm:ss")}`,
+          title: "Las obras han comenzado",
+          description: `Hora de inicio: ${format(new Date(), "HH:mm:ss")}`,
         })
       } else {
         const result = await clockOut(user.id)
@@ -96,14 +96,14 @@ export function DashboardClient({ user, workHours, todayWorkHours, statistics, s
           throw new Error(result.error)
         }
         toast({
-          title: "Zakończono pracę",
-          description: `Czas zakończenia: ${format(new Date(), "HH:mm:ss")}`,
+          title: "Trabajo realizado",
+          description: `Tiempo de finalización: ${format(new Date(), "HH:mm:ss")}`,
         })
       }
       router.refresh()
     } catch (error) {
       toast({
-        title: "Błąd",
+        title: "Error",
         description: error.message,
         variant: "destructive",
       })
@@ -129,8 +129,8 @@ export function DashboardClient({ user, workHours, todayWorkHours, statistics, s
 
     if (endDate <= startDate) {
       toast({
-        title: "Nieprawidłowy zakres czasu",
-        description: "Czas zakończenia musi być późniejszy niż czas rozpoczęcia",
+        title: "Intervalo de tiempo incorrecto",
+        description: "La hora de finalización debe ser posterior a la hora de inicio",
         variant: "destructive",
       })
       return
@@ -153,8 +153,8 @@ export function DashboardClient({ user, workHours, todayWorkHours, statistics, s
 
 
       toast({
-        title: editingWorkHourId ? "Zaktualizowano godziny pracy" : "Zapisano godziny pracy",
-        description: `Ustawiono godziny od ${manualStartTime} do ${manualEndTime}`,
+        title: editingWorkHourId ? "Horario de apertura actualizado" : "Horas de trabajo registradas",
+        description: `Horario de ${manualStartTime} A ${manualEndTime}`,
       })
       setIsDialogOpen(false)
       setEditingDate("")
@@ -171,7 +171,7 @@ export function DashboardClient({ user, workHours, todayWorkHours, statistics, s
   }
 
   const handleDeleteSession = async (workHourId: string) => {
-    if (!confirm("Czy na pewno chcesz usunąć tę sesję?")) {
+    if (!confirm("¿Está seguro de que desea eliminar esta sesión??")) {
       return
     }
 
@@ -181,13 +181,13 @@ export function DashboardClient({ user, workHours, todayWorkHours, statistics, s
         throw new Error(result.error)
       }
       toast({
-        title: "Usunięto sesję",
-        description: "Sesja została pomyślnie usunięta",
+        title: "Sesión eliminada",
+        description: "La sesión se ha eliminado correctamente",
       })
       router.refresh()
     } catch (error) {
       toast({
-        title: "Błąd",
+        title: "Error",
         description: error.message,
         variant: "destructive",
       })
@@ -339,10 +339,10 @@ export function DashboardClient({ user, workHours, todayWorkHours, statistics, s
                       >
                         <Clock className="w-4 h-4 mr-2" />
                         {isLoading
-                          ? "Proszę czekać..."
+                          ? "Espere, por favor..."
                           : todayWorkHours.hasActiveSession
-                            ? "Zakończ sesję"
-                            : "Rozpocznij pracę"}
+                            ? "Fin de la sesión"
+                            : "Empezar"}
                       </Button>
                     </DialogTrigger>
                     <DialogContent>
@@ -490,7 +490,7 @@ export function DashboardClient({ user, workHours, todayWorkHours, statistics, s
                 <div className="mt-4 space-y-4">
                   <div className="pt-2 border-t">
                     <div className="flex justify-between items-center font-medium">
-                      <span>Łącznie dzisiaj:</span>
+                      <span>Total hoy:</span>
                       <span>{todayWorkHours.totalHours}h</span>
                     </div>
                   </div>
@@ -567,9 +567,9 @@ export function DashboardClient({ user, workHours, todayWorkHours, statistics, s
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[200px]">Data</TableHead>
-                    <TableHead>Sesje</TableHead>
-                    <TableHead className="text-right w-[150px]">Suma Godzin</TableHead>
+                    <TableHead className="w-[200px]">Fecha</TableHead>
+                    <TableHead>Sesiones</TableHead>
+                    <TableHead className="text-right w-[150px]">Horas totales</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -588,7 +588,7 @@ export function DashboardClient({ user, workHours, todayWorkHours, statistics, s
                                 className="flex items-center justify-between bg-muted/50 p-2 rounded-md"
                               >
                                 <div className="flex items-center gap-2">
-                                  <span className="text-sm font-medium">Sesja {index + 1}:</span>
+                                  <span className="text-sm font-medium">Sesión {index + 1}:</span>
                                   <span className="text-sm">
                                     {session.start_time} - {session.end_time || "w trakcie"}
                                   </span>
@@ -609,7 +609,7 @@ export function DashboardClient({ user, workHours, todayWorkHours, statistics, s
                                       }
                                     >
                                       <PencilLine className="h-4 w-4" />
-                                      <span className="sr-only">Edytuj sesję</span>
+                                      <span className="sr-only">Editar sesión</span>
                                     </Button>
                                     <Button
                                       variant="ghost"
@@ -618,7 +618,7 @@ export function DashboardClient({ user, workHours, todayWorkHours, statistics, s
                                       onClick={() => handleDeleteSession(session.id)}
                                     >
                                       <Trash2 className="h-4 w-4" />
-                                      <span className="sr-only">Usuń sesję</span>
+                                      <span className="sr-only">Borrar sesión</span>
                                     </Button>
                                   </div>
                                 )}
