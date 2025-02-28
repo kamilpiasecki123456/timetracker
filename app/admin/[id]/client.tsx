@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { format } from "date-fns"
 import { es, pl } from "date-fns/locale"
-import { ArrowLeft, CalendarIcon,  PencilLine, Printer } from "lucide-react"
+import { ArrowLeft, CalendarIcon,  PencilLine, Printer, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { useRef, useState } from "react"
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
@@ -18,7 +18,7 @@ import { useRouter } from "next/navigation"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
-import { updateWorkHours } from "@/lib/actions/work-hours"
+import { deleteWorkHours, updateWorkHours } from "@/lib/actions/work-hours"
 import { useToast } from "@/components/ui/use-toast"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -101,10 +101,27 @@ export function EmployeeDetailsClient({ employee, workHours, offices, statistics
     documentTitle: `Rejestr godzin - ${employee.full_name}`,
   })
 
-  const handleDateRangeSelect = (range: DateRange | undefined) => {
-    if (range?.from && range?.to) {
-      setDate(range)
-      router.push(`/admin/${employee.id}?from=${format(range.from, "yyyy-MM-dd")}&to=${format(range.to, "yyyy-MM-dd")}`)
+  const handleDeleteSession = async (workHourId: string) => {
+    if (!confirm("Czy na pewno chcesz usunąć tę sesję?")) {
+      return
+    }
+
+    try {
+      const result = await deleteWorkHours(workHourId)
+      if (result.error) {
+        throw new Error(result.error)
+      }
+      toast({
+        title: "Usunięto sesję",
+        description: "Sesja została pomyślnie usunięta",
+      })
+      router.refresh()
+    } catch (error) {
+      toast({
+        title: "Błąd",
+        description: error.message,
+        variant: "destructive",
+      })
     }
   }
 
@@ -180,16 +197,18 @@ export function EmployeeDetailsClient({ employee, workHours, offices, statistics
     const currentDate = new Date(date.from)
 
     while (currentDate <= date.to) {
-      const workEntry = workHours.find((entry) => entry.date === format(currentDate, "yyyy-MM-dd"))
+      const dayEntries = workHours.filter((entry) => entry.date === format(currentDate, "yyyy-MM-dd"))
+      const totalHours = dayEntries.reduce((sum, entry) => sum + (entry.total_hours || 0), 0)
 
       days.push({
         date: format(currentDate, "yyyy-MM-dd"),
         displayDate: format(currentDate, "d MMM", { locale: es }),
-        hours: workEntry?.total_hours || 0,
-        startTime: workEntry?.start_time || null,
-        endTime: workEntry?.end_time || null,
-        workHourId: workEntry?.id || null,
-        officeId: workEntry?.office_id || "00000000-0000-0000-0000-000000000000"
+        hours: totalHours || 0,
+        sessions: dayEntries,
+        startTime: dayEntries[0]?.start_time || null,
+        endTime: dayEntries[dayEntries.length - 1]?.end_time || null,
+        workHourId: dayEntries[0]?.id || null,
+        officeId: dayEntries[0]?.office_id || "00000000-0000-0000-0000-000000000000"
       })
 
       currentDate.setDate(currentDate.getDate() + 1)
@@ -273,7 +292,7 @@ export function EmployeeDetailsClient({ employee, workHours, offices, statistics
                 <CardDescription>este mes</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{statistics.totalHours}h</div>
+                <div className="text-2xl font-bold">{statistics.totalHours.toFixed(2)}h</div>
                 <p className="text-sm text-muted-foreground">z {statistics.expectedHours}h esperado</p>
               </CardContent>
             </Card>
@@ -338,36 +357,77 @@ export function EmployeeDetailsClient({ employee, workHours, offices, statistics
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Día</TableHead>
-                    <TableHead>Inicio</TableHead>
-                    <TableHead>Finalización</TableHead>
-                    <TableHead>Horas trabajadas</TableHead>
-                    <TableHead>Localización</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
+                    <TableHead>Data</TableHead>
+                    <TableHead>Sesje</TableHead>
+                    <TableHead className="text-right">Przepracowane Godziny</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {chartData
-                    .filter((day) => day.hours > 0)
-                    .map((day) => (
-                      <TableRow key={day.date}>
-                        <TableCell className="font-medium">
-                          {format(new Date(day.date), "d MMMM (EEEE)", { locale: es })}
+                {Object.entries(
+                    workHours.reduce(
+                      (acc, workHour) => {
+                        const date = workHour.date
+                        if (!acc[date]) {
+                          acc[date] = {
+                            sessions: [],
+                            totalHours: 0,
+                          }
+                        }
+                        acc[date].sessions.push(workHour)
+                        acc[date].totalHours += workHour.total_hours || 0
+                        return acc
+                      },
+                      {} as { [key: string]: { sessions: typeof workHours; totalHours: number } },
+                    ),
+                  )
+                    .sort(([dateA], [dateB]) => new Date(dateB).getTime() - new Date(dateA).getTime())
+                    .map(([date, dayData]) => (
+                      <TableRow key={date}>
+                        <TableCell className="font-medium align-top">
+                          {format(new Date(date), "d MMMM (EEEE)", { locale: es })}
                         </TableCell>
-                        <TableCell>{day.startTime}</TableCell>
-                        <TableCell>{day.endTime || "W trakcie"}</TableCell>
-                        <TableCell>{day.hours}h</TableCell>
-                        <TableCell>{offices.find((office) => office.id === day.officeId)?.name ?? "null"}</TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEdit(day.date, day.startTime, day.endTime, day.workHourId, day.officeId)}
-                          >
-                            <PencilLine className="w-4 h-4 mr-2" />
-                            Editar
-                          </Button>
+                        <TableCell>
+                          <div className="space-y-2">
+                            {dayData.sessions.map((session, index) => (
+                              <div
+                                key={session.id}
+                                className="flex items-center justify-between bg-muted/50 p-2 rounded-md"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm font-medium">Sesja {index + 1}:</span>
+                                  <span className="text-sm">
+                                    {session.start_time} - {session.end_time || "w trakcie"}
+                                  </span>
+                                  <span className="text-sm text-muted-foreground">({session.total_hours}h)</span>
+                                  <span className="text-sm">- {offices.find((office) => office.id === session.office_id)?.name ?? "null"}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 w-8 p-0"
+                                    onClick={() =>
+                                      handleEdit(date, session.start_time, session.end_time || "", session.id, session.office_id)
+                                    }
+                                  >
+                                    <PencilLine className="h-4 w-4" />
+                                    <span className="sr-only">Edytuj sesję</span>
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 w-8 p-0 hover:text-destructive"
+                                    onClick={() => handleDeleteSession(session.id)}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                    <span className="sr-only">Usuń sesję</span>
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
                         </TableCell>
+                        <TableCell className="text-right align-top font-medium">{dayData.totalHours}h</TableCell>
                       </TableRow>
                     ))}
                 </TableBody>

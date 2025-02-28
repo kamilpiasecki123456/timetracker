@@ -19,16 +19,19 @@ import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
 import { addMonths, format, startOfMonth, endOfMonth, subMonths, isSameMonth, isWithinInterval, startOfDay, subDays, endOfDay } from "date-fns"
 import { es } from "date-fns/locale"
-import { ChevronLeft, ChevronRight, Clock, LogOut, PencilLine, UserCog } from "lucide-react"
+import { ChevronLeft, ChevronRight, Clock, LogOut, PencilLine, Trash2, UserCog } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
-import { clockIn, clockOut, setManualWorkHours, updateWorkHours } from "@/lib/actions/work-hours"
+import { clockIn, clockOut, deleteWorkHours, setManualWorkHours, updateWorkHours } from "@/lib/actions/work-hours"
 import { signOut } from "@/lib/actions/auth"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import Link from "next/link"
 import { MobileNav } from "@/components/mobile-nav"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { cn } from "@/lib/utils"
 
 type WorkHour = Database["public"]["Tables"]["work_hours"]["Row"]
 type User = Database["public"]["Tables"]["users"]["Row"]
@@ -38,8 +41,18 @@ type Office = Database["public"]["Tables"]["offices"]["Row"]
 interface DashboardClientProps {
   user: User
   offices: Office[]
-  workHours: WorkHour[]
-  todayWorkHours: WorkHour | null
+  workHours: {
+    [date: string]: {
+      total_hours: number
+      sessions: WorkHour[]
+    }
+  }
+  todayWorkHours: {
+    sessions: WorkHour[]
+    activeSession: WorkHour | null
+    totalHours: number
+    hasActiveSession: boolean
+  }
   statistics: {
     totalHours: number
     daysWorked: number
@@ -54,19 +67,21 @@ export function DashboardClient({ user, workHours, todayWorkHours, statistics, s
   const [currentMonth, setCurrentMonth] = useState<Date>(selectedMonth)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isSelectPlaceDialogOpen, setIsSelectPlaceDialogOpen] = useState(false)
-  const [manualStartTime, setManualStartTime] = useState(todayWorkHours?.start_time || "")
-  const [manualEndTime, setManualEndTime] = useState(todayWorkHours?.end_time || "")
+  const [manualStartTime, setManualStartTime] = useState(todayWorkHours?.activeSession?.start_time || "")
+  const [manualEndTime, setManualEndTime] = useState(todayWorkHours?.activeSession?.end_time || "")
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
   const router = useRouter()
   const [editingDate, setEditingDate] = useState("")
   const [editingWorkHourId, setEditingWorkHourId] = useState("")
   const [selectedOfficeId, setSelectedOfficeId] = useState<string>("00000000-0000-0000-0000-000000000000")
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
+  const [isAddSessionDialogOpen, setIsAddSessionDialogOpen] = useState(false)
 
   const handleClockInOut = async () => {
     try {
       setIsLoading(true)
-      if (!todayWorkHours || todayWorkHours.end_time) {
+      if (!todayWorkHours.hasActiveSession) {
         const result = await clockIn(user.id, selectedOfficeId)
         if (result.error) {
           throw new Error(result.error)
@@ -128,13 +143,14 @@ export function DashboardClient({ user, workHours, todayWorkHours, statistics, s
         result = await updateWorkHours(editingWorkHourId, manualStartTime, manualEndTime, selectedOfficeId)
       } else {
         // Create new work hours
-        const date = editingDate || format(new Date(), "yyyy-MM-dd")
+        const date = editingDate || (selectedDate ? format(selectedDate, "yyyy-MM-dd") : undefined )|| format(new Date(), "yyyy-MM-dd")
         result = await setManualWorkHours(user.id, date, manualStartTime, manualEndTime, selectedOfficeId)
       }
 
       if (result.error) {
         throw new Error(result.error)
       }
+
 
       toast({
         title: editingWorkHourId ? "Zaktualizowano godziny pracy" : "Zapisano godziny pracy",
@@ -144,6 +160,30 @@ export function DashboardClient({ user, workHours, todayWorkHours, statistics, s
       setEditingDate("")
       setEditingWorkHourId("")
       setSelectedOfficeId("00000000-0000-0000-0000-000000000000")
+      router.refresh()
+    } catch (error) {
+      toast({
+        title: "Błąd",
+        description: error.message,
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleDeleteSession = async (workHourId: string) => {
+    if (!confirm("Czy na pewno chcesz usunąć tę sesję?")) {
+      return
+    }
+
+    try {
+      const result = await deleteWorkHours(workHourId)
+      if (result.error) {
+        throw new Error(result.error)
+      }
+      toast({
+        title: "Usunięto sesję",
+        description: "Sesja została pomyślnie usunięta",
+      })
       router.refresh()
     } catch (error) {
       toast({
@@ -192,19 +232,17 @@ export function DashboardClient({ user, workHours, todayWorkHours, statistics, s
     // Przygotowanie danych wykresu
     return allDaysInMonth.map((day) => {
       // Sprawdzenie, czy dany dzień istnieje w workHours
-      const workEntry = workHours.find((entry) => {
-        const entryDate = new Date(entry.date)
-        return entryDate.getDate() === day.getDate() && entryDate.getMonth() === day.getMonth()
-      })
+      const dateString = format(day, "yyyy-MM-dd")
+      const workEntry = workHours[dateString]
 
       return {
-        date: format(day, "yyyy-MM-dd"),
+        date: dateString,
         displayDate: format(day, "d MMM", { locale: es }),
-        hours: workEntry ? workEntry.total_hours || 0 : 0,
-        startTime: workEntry ? workEntry.start_time : null,
-        endTime: workEntry ? workEntry.end_time || "W trakcie" : null,
-        workHourId: workEntry?.id || null,
-        officeId: workEntry?.office_id || "00000000-0000-0000-0000-000000000000"
+        hours: workEntry ? workEntry.total_hours : 0,
+        startTime: workEntry?.sessions[0]?.start_time || null,
+        endTime: workEntry?.sessions[workEntry.sessions.length - 1]?.end_time || null,
+        workHourId: workEntry?.sessions[0]?.id || null,
+        officeId: workEntry?.sessions[0]?.office_id || "00000000-0000-0000-0000-000000000000"
       }
     })
   }
@@ -213,17 +251,17 @@ export function DashboardClient({ user, workHours, todayWorkHours, statistics, s
   const chartData = generateChartData(currentMonth)
 
   // Calculate current week's hours
-  const currentWeekHours = workHours
+  const currentWeekHours = Object.values(workHours)
     .filter((entry) => {
-      const entryDate = new Date(entry.date)
       const now = new Date()
       const weekStart = new Date(now.setDate(now.getDate() - now.getDay()))
+      const entryDate = new Date(Object.keys(workHours).find((key) => workHours[key] === entry)!)
       return entryDate >= weekStart
     })
-    .reduce((sum, entry) => sum + (entry.total_hours || 0), 0)
+    .reduce((sum, entry) => sum + entry.total_hours, 0)
 
   // Sprawdzanie aktywnej sesji
-  const isClockIn = todayWorkHours && !todayWorkHours.end_time
+  const isClockIn = todayWorkHours.hasActiveSession
 
   const CustomTooltip = ({ active, payload, onEdit }: any) => {
     if (active && payload && payload.length) {
@@ -288,19 +326,23 @@ export function DashboardClient({ user, workHours, todayWorkHours, statistics, s
               <CardDescription>Gestione su tiempo de trabajo</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {!todayWorkHours && (
+              {!todayWorkHours.hasActiveSession && (
                 <>
                   
                   <Dialog open={isSelectPlaceDialogOpen} onOpenChange={setIsSelectPlaceDialogOpen}>
                     <DialogTrigger asChild>
                       <Button
                         className="w-full"
-                        variant="default"
+                        variant={todayWorkHours.hasActiveSession ? "destructive" : "default"}
                         size="lg"
                         disabled={isLoading}
                       >
                         <Clock className="w-4 h-4 mr-2" />
-                        {isLoading ? "Proszę czekać..." : "Empezar a trabajar"}
+                        {isLoading
+                          ? "Proszę czekać..."
+                          : todayWorkHours.hasActiveSession
+                            ? "Zakończ sesję"
+                            : "Rozpocznij pracę"}
                       </Button>
                     </DialogTrigger>
                     <DialogContent>
@@ -343,6 +385,40 @@ export function DashboardClient({ user, workHours, todayWorkHours, statistics, s
                           <DialogDescription>Introduzca las horas de inicio y fin</DialogDescription>
                         </DialogHeader>
                         <div className="grid gap-4 py-4">
+                          <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="start-time" className="text-right">
+                              Data
+                            </Label>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant={"outline"}
+                                  className={cn(
+                                    "justify-start text-left font-normal col-span-3",
+                                    !selectedDate && "text-muted-foreground",
+                                  )}
+                                >
+                                  {selectedDate ? (
+                                    format(selectedDate, "d MMMM yyyy", { locale: es })
+                                  ) : (
+                                    <span>Wybierz datę</span>
+                                  )}
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                  mode="single"
+                                  selected={selectedDate}
+                                  onSelect={setSelectedDate}
+                                  disabled={(date) => {
+                                    const thirtyDaysAgo = subDays(new Date(), 30)
+                                    return date > new Date() || date < thirtyDaysAgo
+                                  }}
+                                  initialFocus
+                                />
+                              </PopoverContent>
+                            </Popover>
+                          </div>
                           <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="start-time" className="text-right">
                               Inicio
@@ -409,96 +485,15 @@ export function DashboardClient({ user, workHours, todayWorkHours, statistics, s
                 </Button>
               )}
 
-              {todayWorkHours?.end_time && (
-                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="w-full"
-                      onClick={() =>
-                        handleEdit(
-                          todayWorkHours.date,
-                          todayWorkHours.start_time,
-                          todayWorkHours.end_time || "",
-                          todayWorkHours.id,
-                          todayWorkHours.office_id || "00000000-0000-0000-0000-000000000000"
-                        )
-                      }
-                    >
-                      <PencilLine className="w-4 h-4 mr-2" />
-                      Editar el horario de trabajo
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <form onSubmit={handleWorkHours}>
-                      <DialogHeader>
-                        <DialogTitle>Editar el horario de trabajo</DialogTitle>
-                        <DialogDescription>Cambiar las horas de inicio y fin</DialogDescription>
-                      </DialogHeader>
-                      <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-4 items-center gap-4">
-                          <Label htmlFor="start-time" className="text-right">
-                            Inicio
-                          </Label>
-                          <Input
-                            id="start-time"
-                            type="time"
-                            value={manualStartTime}
-                            onChange={(e) => setManualStartTime(e.target.value)}
-                            className="col-span-3"
-                            required
-                          />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                          <Label htmlFor="end-time" className="text-right">
-                            Finalización
-                          </Label>
-                          <Input
-                            id="end-time"
-                            type="time"
-                            value={manualEndTime}
-                            onChange={(e) => setManualEndTime(e.target.value)}
-                            className="col-span-3"
-                            required
-                          />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                          <Label htmlFor="end-time" className="text-right">
-                            Localización
-                          </Label>
-                          <Select  required value={selectedOfficeId} onValueChange={(value) => setSelectedOfficeId(value)}>
-                            <SelectTrigger className="col-span-3">
-                              <SelectValue placeholder="Localización" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {offices.map((office) => (
-                                <SelectItem key={office.id} value={office.id}>
-                                  {office.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                      <DialogFooter>
-                        <Button type="submit">Guardar cambios</Button>
-                      </DialogFooter>
-                    </form>
-                  </DialogContent>
-                </Dialog>
-              )}
 
-              {todayWorkHours && (
-                <div className="mt-4 text-center text-sm space-y-1">
-                  <p className="text-muted-foreground">Horario de trabajo de hoy:</p>
-                  <p className="font-medium">
-                    {todayWorkHours.start_time} - {todayWorkHours.end_time || "W trakcie"}
-                  </p>
-                  {!!todayWorkHours.total_hours && (
-                    <p className="text-muted-foreground">
-                      Total: <span className="font-medium">{todayWorkHours.total_hours}h</span>
-                    </p>
-                  )}
+              {todayWorkHours.sessions.length > 0 && (
+                <div className="mt-4 space-y-4">
+                  <div className="pt-2 border-t">
+                    <div className="flex justify-between items-center font-medium">
+                      <span>Łącznie dzisiaj:</span>
+                      <span>{todayWorkHours.totalHours}h</span>
+                    </div>
+                  </div>
                 </div>
               )}
             </CardContent>
@@ -514,12 +509,12 @@ export function DashboardClient({ user, workHours, todayWorkHours, statistics, s
               <div className="grid gap-4 md:grid-cols-3">
                 <div className="space-y-2">
                   <p className="text-sm font-medium">Esta semana</p>
-                  <p className="text-2xl font-bold">{currentWeekHours}h</p>
+                  <p className="text-2xl font-bold">{currentWeekHours.toFixed(2)}h</p>
                   <p className="text-sm text-muted-foreground">de 40 horas</p>
                 </div>
                 <div className="space-y-2">
                   <p className="text-sm font-medium">Este mes</p>
-                  <p className="text-2xl font-bold">{statistics.totalHours}h</p>
+                  <p className="text-2xl font-bold">{statistics.totalHours.toFixed(2)}h</p>
                   <p className="text-sm text-muted-foreground">Esperado: {statistics.expectedHours}h</p>
                 </div>
                 <div className="space-y-2">
@@ -572,41 +567,66 @@ export function DashboardClient({ user, workHours, todayWorkHours, statistics, s
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>Inicio</TableHead>
-                    <TableHead>Finalización</TableHead>
-                    <TableHead>Horas trabajadas</TableHead>
-                    <TableHead>Localización</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
+                    <TableHead className="w-[200px]">Data</TableHead>
+                    <TableHead>Sesje</TableHead>
+                    <TableHead className="text-right w-[150px]">Suma Godzin</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {chartData
-                    .filter((day) => day.hours > 0)
-                    .map((day) => (
-                      <TableRow key={day.date}>
-                        <TableCell className="font-medium">
-                          {format(new Date(day.date), "d MMMM (EEEE)", { locale: es })}
+                  {Object.entries(workHours)
+                    .sort(([dateA], [dateB]) => new Date(dateB).getTime() - new Date(dateA).getTime())
+                    .map(([date, dayData]) => (
+                      <TableRow key={date}>
+                        <TableCell className="font-medium align-top">
+                          {format(new Date(date), "d MMMM (EEEE)", { locale: es })}
                         </TableCell>
-                        <TableCell>{day.startTime}</TableCell>
-                        <TableCell>{day.endTime || "W trakcie"}</TableCell>
-                        <TableCell>{day.hours}h</TableCell>
-                        <TableCell>{offices.find((office) => office.id === day.officeId)?.name ?? "null"}</TableCell>
-                        <TableCell className="text-right">
-                          {isWithinInterval(new Date(day.date), {
-                            start: startOfDay(subDays(new Date(), 30)),
-                            end: endOfDay(new Date())
-                          }) && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEdit(day.date, day.startTime, day.endTime, day.workHourId, day.officeId)}
-                            >
-                              <PencilLine className="w-4 h-4 mr-2" />
-                              Editar
-                            </Button>
-                          )}
+                        <TableCell>
+                          <div className="space-y-2">
+                            {dayData.sessions.map((session, index) => (
+                              <div
+                                key={session.id}
+                                className="flex items-center justify-between bg-muted/50 p-2 rounded-md"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm font-medium">Sesja {index + 1}:</span>
+                                  <span className="text-sm">
+                                    {session.start_time} - {session.end_time || "w trakcie"}
+                                  </span>
+                                  <span className="text-sm text-muted-foreground">({session.total_hours}h)</span>
+                                  <span className="text-sm">- {offices.find((office) => office.id === session.office_id)?.name ?? "null"}</span>
+                                </div>
+                                {isWithinInterval(new Date(session.date), {
+                                  start: startOfDay(subDays(new Date(), 30)),
+                                  end: endOfDay(new Date())
+                                }) && (
+                                  <div className="flex">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="ml-2"
+                                      onClick={() =>
+                                        handleEdit(date, session.start_time, session.end_time || "", session.id, session.office_id)
+                                      }
+                                    >
+                                      <PencilLine className="h-4 w-4" />
+                                      <span className="sr-only">Edytuj sesję</span>
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-8 w-8 p-0 hover:text-destructive"
+                                      onClick={() => handleDeleteSession(session.id)}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                      <span className="sr-only">Usuń sesję</span>
+                                    </Button>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
                         </TableCell>
+                        <TableCell className="text-right align-top font-medium">{dayData.total_hours}h</TableCell>
                       </TableRow>
                     ))}
                 </TableBody>

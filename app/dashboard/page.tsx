@@ -37,22 +37,39 @@ export default async function DashboardPage({
     .lte("date", format(monthEnd, "yyyy-MM-dd"))
     .order("date", { ascending: true })
 
+  // Grupuj godziny pracy po dniach i sumuj godziny
+  const dailyWorkHours =
+  workHours?.reduce((acc, curr) => {
+    const date = curr.date
+    if (!acc[date]) {
+      acc[date] = {
+        total_hours: 0,
+        sessions: [],
+      }
+    }
+    acc[date].sessions.push(curr)
+    if (curr.total_hours) {
+      acc[date].total_hours += curr.total_hours
+    }
+    return acc
+  }, {}) || {}
+
   // Get today's work hours with cache busting
   const headersList = headers()
   const timestamp = headersList.get("x-timestamp") || Date.now()
-  const { data: todayWorkHours } = await getTodayWorkHours(user.id)
+  const { data: todayWorkHoursData } = await getTodayWorkHours(user.id)
 
   // Calculate statistics for the selected month
-  const totalHours = workHours?.reduce((sum, entry) => sum + (entry.total_hours || 0), 0) || 0
-  const daysWorked = new Set(workHours?.map((entry) => entry.date)).size
+  const totalHours = Object.values(dailyWorkHours).reduce((sum, day: any) => sum + day.total_hours, 0)
+  const daysWorked = Object.keys(dailyWorkHours).length
   const expectedHours = daysWorked * 8 // Zakładając 8-godzinny dzień pracy
 
   return (
     <DashboardClient
       user={userDetails}
       offices={offices || []}
-      workHours={workHours || []}
-      todayWorkHours={todayWorkHours}
+      workHours={dailyWorkHours}
+      todayWorkHours={todayWorkHoursData}
       statistics={{
         totalHours,
         daysWorked,

@@ -75,6 +75,20 @@ export async function clockOut(userId: string) {
 export async function setManualWorkHours(userId: string, date: string, startTime: string, endTime: string, officeId: string) {
   const supabase = createClient()
 
+  const selectedDate = new Date(date)
+  const thirtyDaysAgo = new Date()
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+  if (selectedDate < thirtyDaysAgo) {
+    return { error: "Nie można dodać sesji starszej niż 30 dni" }
+  }
+
+  // Sprawdź czy data nie jest z przyszłości
+  if (selectedDate > new Date()) {
+    return { error: "Nie można dodać sesji z przyszłości" }
+  }
+
+  console.log(date)
   const start = new Date(`${date}T${startTime}`)
   const end = new Date(`${date}T${endTime}`)
   const totalHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60)
@@ -130,21 +144,44 @@ export async function getTodayWorkHours(userId: string) {
   const supabase = createClient()
   const today = new Date().toISOString().split("T")[0]
 
-  // Pobierz najnowszy wpis z dzisiaj
+  // Pobierz wszystkie wpisy z dzisiaj
   const { data, error } = await supabase
     .from("work_hours")
     .select()
     .eq("user_id", userId)
     .eq("date", today)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .single()
+    .order("created_at", { ascending: true })
 
-  if (error && error.code !== "PGRST116") {
-    // PGRST116 is "no rows returned"
+  if (error) {
     return { error: error.message }
   }
 
-  return { data }
+  // Oblicz łączną liczbę godzin dla zakończonych sesji
+  const completedSessions = data.filter((session) => session.end_time)
+  const totalHours = completedSessions.reduce((sum, session) => sum + (session.total_hours || 0), 0)
+
+  // Znajdź aktywną sesję (jeśli istnieje)
+  const activeSession = data.find((session) => !session.end_time)
+
+  return {
+    data: {
+      sessions: data,
+      activeSession,
+      totalHours,
+      hasActiveSession: !!activeSession,
+    },
+  }
 }
 
+export async function deleteWorkHours(workHourId: string) {
+  const supabase = createClient()
+
+  const { error } = await supabase.from("work_hours").delete().eq("id", workHourId)
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  revalidatePath("/dashboard")
+  return { success: true }
+}
