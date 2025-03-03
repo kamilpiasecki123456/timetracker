@@ -14,12 +14,12 @@ export default function Home() {
           <div className="flex flex-col space-y-2">
             <Link href="/login">
               <Button className="w-full" size="lg">
-                Login
+                Inicio de sesión
               </Button>
             </Link>
             <Link href="/register">
               <Button variant="outline" className="w-full" size="lg">
-                Register
+                Regístrese en
               </Button>
             </Link>
           </div>

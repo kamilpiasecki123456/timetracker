@@ -7,9 +7,8 @@ import { Toaster } from "@/components/ui/toaster"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Employee Time Tracker",
-  description: "Track your work hours efficiently",
-    generator: 'v0.dev'
+  title: "OxidoVerde Time Tracker",
+  description: "Track your work hours efficiently"
 }
 
 export default function RootLayout({
@@ -18,7 +17,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
+    <html lang="es">
       <body className={inter.className}>
         {children}
         <Toaster />

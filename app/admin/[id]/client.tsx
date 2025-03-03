@@ -98,11 +98,11 @@ export function EmployeeDetailsClient({ employee, workHours, offices, statistics
 
   const handlePrint = useReactToPrint({
     contentRef: printComponentRef,
-    documentTitle: `Rejestr godzin - ${employee.full_name}`,
+    documentTitle: `Registro de horas - ${employee.full_name}`,
   })
 
   const handleDeleteSession = async (workHourId: string) => {
-    if (!confirm("Czy na pewno chcesz usunąć tę sesję?")) {
+    if (!confirm("¿Estás seguro de que quieres borrar esta sesión?")) {
       return
     }
 
@@ -112,13 +112,13 @@ export function EmployeeDetailsClient({ employee, workHours, offices, statistics
         throw new Error(result.error)
       }
       toast({
-        title: "Usunięto sesję",
-        description: "Sesja została pomyślnie usunięta",
+        title: "Sesión eliminada",
+        description: "La sesión se ha eliminado correctamente",
       })
       router.refresh()
     } catch (error) {
       toast({
-        title: "Błąd",
+        title: "Error",
         description: error.message,
         variant: "destructive",
       })
@@ -411,7 +411,7 @@ export function EmployeeDetailsClient({ employee, workHours, offices, statistics
                                     }
                                   >
                                     <PencilLine className="h-4 w-4" />
-                                    <span className="sr-only">Edytuj sesję</span>
+                                    <span className="sr-only">Editar sesión</span>
                                   </Button>
                                   <Button
                                     variant="ghost"
@@ -420,7 +420,7 @@ export function EmployeeDetailsClient({ employee, workHours, offices, statistics
                                     onClick={() => handleDeleteSession(session.id)}
                                   >
                                     <Trash2 className="h-4 w-4" />
-                                    <span className="sr-only">Usuń sesję</span>
+                                    <span className="sr-only">Borrar sesión</span>
                                   </Button>
                                 </div>
                               </div>

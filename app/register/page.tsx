@@ -31,30 +31,30 @@ export default function RegisterPage() {
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Register</CardTitle>
-          <CardDescription>Create a new account</CardDescription>
+          <CardTitle className="text-2xl">Regístrese en</CardTitle>
+          <CardDescription>Crear una nueva cuenta</CardDescription>
         </CardHeader>
         <CardContent>
           <form action={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Full Name</Label>
-              <Input id="name" name="name" placeholder="Enter your full name" required />
+              <Label htmlFor="name">Nombre y apellidos</Label>
+              <Input id="name" name="name" placeholder="Introduzca su nombre completo" required />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" name="email" type="email" placeholder="Enter your email" required />
+              <Label htmlFor="email">Correo electrónico</Label>
+              <Input id="email" name="email" type="email" placeholder="Introduzca su dirección de correo electrónico" required />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input id="password" name="password" type="password" placeholder="Create a password" required />
+              <Label htmlFor="password">Contraseña</Label>
+              <Input id="password" name="password" type="password" placeholder="Crear una contraseña" required />
             </div>
             <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
-              {isLoading ? "Creating account..." : "Register"}
+              {isLoading ? "Crear cuenta..." : "Regístrese en"}
             </Button>
             <div className="text-center text-sm">
-              Already have an account?{" "}
+              ¿Ya tiene una cuenta?{" "}
               <Link href="/login" className="text-primary hover:underline">
-                Login
+              Inicio de sesión
               </Link>
             </div>
           </form>

@@ -481,7 +481,7 @@ export function DashboardClient({ user, workHours, todayWorkHours, statistics, s
                   disabled={isLoading}
                 >
                   <Clock className="w-4 h-4 mr-2" />
-                  {isLoading ? "Proszę czekać..." : "Zakończ pracę"}
+                  {isLoading ? "Por favor, espere..." : "Terminar el trabajo"}
                 </Button>
               )}
 

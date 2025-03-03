@@ -31,26 +31,26 @@ export default function LoginPage() {
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Login</CardTitle>
-          <CardDescription>Enter your credentials to access your account</CardDescription>
+          <CardTitle className="text-2xl">Inicio de sesión</CardTitle>
+          <CardDescription>Introduzca sus credenciales para acceder a su cuenta</CardDescription>
         </CardHeader>
         <CardContent>
           <form action={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" name="email" type="email" placeholder="Enter your email" required />
+              <Label htmlFor="email">Correo electrónico</Label>
+              <Input id="email" name="email" type="email" placeholder="Introduzca su dirección de correo electrónico" required />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input id="password" name="password" type="password" placeholder="Enter your password" required />
+              <Label htmlFor="password">Contraseña</Label>
+              <Input id="password" name="password" type="password" placeholder="Introduzca su contraseña" required />
             </div>
             <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
-              {isLoading ? "Logging in..." : "Login"}
+              {isLoading ? "Iniciando sesión..." : "Inicio de sesión"}
             </Button>
             <div className="text-center text-sm">
-              {"Don't have an account? "}
+              {"¿No tiene cuenta? "}
               <Link href="/register" className="text-primary hover:underline">
-                Register
+              Regístrese en
               </Link>
             </div>
           </form>
