@@ -24,15 +24,16 @@ export default async function AdminDashboard() {
     .from("users")
     .select(`
       *,
-      work_hours!inner (
+      work_hours!left (
         date,
         start_time,
         end_time,
         total_hours
       )
     `)
-    .eq("role", "employee")
     .order("full_name")
+
+  console.log(employees)
 
   // Process employees data
   const processedEmployees =

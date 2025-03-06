@@ -18,7 +18,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
 import { addMonths, format, startOfMonth, endOfMonth, subMonths, isSameMonth, isWithinInterval, startOfDay, subDays, endOfDay } from "date-fns"
-import { es } from "date-fns/locale"
+import { es, is } from "date-fns/locale"
 import { ChevronLeft, ChevronRight, Clock, LogOut, PencilLine, Trash2, UserCog } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
@@ -32,6 +32,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
+import { Combobox } from "@/components/ui/combobox"
+import { isRSCRequestCheck } from "next/dist/server/base-server"
 
 type WorkHour = Database["public"]["Tables"]["work_hours"]["Row"]
 type User = Database["public"]["Tables"]["users"]["Row"]
@@ -74,15 +76,14 @@ export function DashboardClient({ user, workHours, todayWorkHours, statistics, s
   const router = useRouter()
   const [editingDate, setEditingDate] = useState("")
   const [editingWorkHourId, setEditingWorkHourId] = useState("")
-  const [selectedOfficeId, setSelectedOfficeId] = useState<string>("00000000-0000-0000-0000-000000000000")
+  const [selectedOffice, setSelectedOffice] = useState<{ value: string, isCustomValue: boolean } | null>(null)
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
-  const [isAddSessionDialogOpen, setIsAddSessionDialogOpen] = useState(false)
 
   const handleClockInOut = async () => {
     try {
       setIsLoading(true)
       if (!todayWorkHours.hasActiveSession) {
-        const result = await clockIn(user.id, selectedOfficeId)
+        const result = await clockIn(user.id, selectedOffice)
         if (result.error) {
           throw new Error(result.error)
         }
@@ -113,11 +114,12 @@ export function DashboardClient({ user, workHours, todayWorkHours, statistics, s
   }
 
   const handleEdit = (date: string, startTime: string, endTime: string, workHourId: string, officeId: string) => {
+    console.log(officeId)
     setEditingDate(date)
     setManualStartTime(startTime)
     setManualEndTime(endTime || "")
     setEditingWorkHourId(workHourId)
-    setSelectedOfficeId(officeId)
+    setSelectedOffice({ value: officeId, isCustomValue: false })
     setIsDialogOpen(true)
   }
 
@@ -140,11 +142,11 @@ export function DashboardClient({ user, workHours, todayWorkHours, statistics, s
       let result
       if (editingWorkHourId) {
         // Update existing work hours
-        result = await updateWorkHours(editingWorkHourId, manualStartTime, manualEndTime, selectedOfficeId)
+        result = await updateWorkHours(editingWorkHourId, manualStartTime, manualEndTime, selectedOffice)
       } else {
         // Create new work hours
         const date = editingDate || (selectedDate ? format(selectedDate, "yyyy-MM-dd") : undefined )|| format(new Date(), "yyyy-MM-dd")
-        result = await setManualWorkHours(user.id, date, manualStartTime, manualEndTime, selectedOfficeId)
+        result = await setManualWorkHours(user.id, date, manualStartTime, manualEndTime, selectedOffice)
       }
 
       if (result.error) {
@@ -159,7 +161,7 @@ export function DashboardClient({ user, workHours, todayWorkHours, statistics, s
       setIsDialogOpen(false)
       setEditingDate("")
       setEditingWorkHourId("")
-      setSelectedOfficeId("00000000-0000-0000-0000-000000000000")
+      setSelectedOffice(null)
       router.refresh()
     } catch (error) {
       toast({
@@ -352,18 +354,18 @@ export function DashboardClient({ user, workHours, todayWorkHours, statistics, s
                           <DialogDescription>Elija su lugar de trabajo</DialogDescription>
                         </DialogHeader>
                         <div className="grid gap-4 py-4">
-                          <Select required value={selectedOfficeId} onValueChange={(value) => setSelectedOfficeId(value)}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Localización" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {offices.map((office) => (
-                                <SelectItem key={office.id} value={office.id}>
-                                  {office.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                            <Combobox
+                              options={offices.map((office) => ({
+                                value: office.id,
+                                label: office.name,
+                              }))}
+                              value={selectedOffice?.value ?? ""}
+                              onValueChange={(value, isCustomValue) => setSelectedOffice({ value, isCustomValue })}
+                              placeholder="Seleccione o introduzca una ubicación"
+                              emptyText="No se encontraron ubicaciones."
+                              allowCustomValue={true}
+                              className="w-full"
+                            />
                         </div>
                         <DialogFooter>
                           <Button type="submit">Guardar cambios</Button>
@@ -449,18 +451,20 @@ export function DashboardClient({ user, workHours, todayWorkHours, statistics, s
                             <Label htmlFor="end-time" className="text-right">
                               Localización
                             </Label>
-                            <Select  required value={selectedOfficeId} onValueChange={(value) => setSelectedOfficeId(value)}>
-                              <SelectTrigger className="col-span-3">
-                                <SelectValue placeholder="Localización" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {offices.map((office) => (
-                                  <SelectItem key={office.id} value={office.id}>
-                                    {office.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            <div className="col-span-3">
+                              <Combobox
+                                options={offices.map((office) => ({
+                                  value: office.id,
+                                  label: office.name,
+                                }))}
+                                value={selectedOffice?.value ?? ""}
+                                onValueChange={(value, isCustomValue) => setSelectedOffice({ value, isCustomValue })}
+                                placeholder="Seleccione o introduzca una ubicación"
+                                emptyText="No se encontraron ubicaciones."
+                                allowCustomValue={true}
+                                className="w-full"
+                              />
+                            </div>
                           </div>
                         </div>
                         <DialogFooter>
@@ -582,48 +586,50 @@ export function DashboardClient({ user, workHours, todayWorkHours, statistics, s
                         </TableCell>
                         <TableCell>
                           <div className="space-y-2">
-                            {dayData.sessions.map((session, index) => (
-                              <div
-                                key={session.id}
-                                className="flex items-center justify-between bg-muted/50 p-2 rounded-md"
-                              >
-                                <div className="flex items-center gap-2">
-                                  <span className="text-sm font-medium">Sesión {index + 1}:</span>
-                                  <span className="text-sm">
-                                    {session.start_time} - {session.end_time || "w trakcie"}
-                                  </span>
-                                  <span className="text-sm text-muted-foreground">({session.total_hours}h)</span>
-                                  <span className="text-sm">- {offices.find((office) => office.id === session.office_id)?.name ?? "null"}</span>
-                                </div>
-                                {isWithinInterval(new Date(session.date), {
-                                  start: startOfDay(subDays(new Date(), 30)),
-                                  end: endOfDay(new Date())
-                                }) && (
-                                  <div className="flex">
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="ml-2"
-                                      onClick={() =>
-                                        handleEdit(date, session.start_time, session.end_time || "", session.id, session.office_id)
-                                      }
-                                    >
-                                      <PencilLine className="h-4 w-4" />
-                                      <span className="sr-only">Editar sesión</span>
-                                    </Button>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="h-8 w-8 p-0 hover:text-destructive"
-                                      onClick={() => handleDeleteSession(session.id)}
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                      <span className="sr-only">Borrar sesión</span>
-                                    </Button>
+                            {dayData.sessions.map((session, index) => {
+                              return (
+                                <div
+                                  key={session.id}
+                                  className="flex items-center justify-between bg-muted/50 p-2 rounded-md"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm font-medium">Sesión {index + 1}:</span>
+                                    <span className="text-sm">
+                                      {session.start_time} - {session.end_time || "w trakcie"}
+                                    </span>
+                                    <span className="text-sm text-muted-foreground">({session.total_hours}h)</span>
+                                    <span className="text-sm">- {session.offices.name ?? "null"}</span>
                                   </div>
-                                )}
-                              </div>
-                            ))}
+                                  {isWithinInterval(new Date(session.date), {
+                                    start: startOfDay(subDays(new Date(), 30)),
+                                    end: endOfDay(new Date())
+                                  }) && (
+                                    <div className="flex">
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="ml-2"
+                                        onClick={() =>
+                                          handleEdit(date, session.start_time, session.end_time || "", session.id, session.office_id)
+                                        }
+                                      >
+                                        <PencilLine className="h-4 w-4" />
+                                        <span className="sr-only">Editar sesión</span>
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-8 w-8 p-0 hover:text-destructive"
+                                        onClick={() => handleDeleteSession(session.id)}
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                        <span className="sr-only">Borrar sesión</span>
+                                      </Button>
+                                    </div>
+                                  )}
+                                </div>
+                              )
+                            })}
                           </div>
                         </TableCell>
                         <TableCell className="text-right align-top font-medium">{dayData.total_hours}h</TableCell>

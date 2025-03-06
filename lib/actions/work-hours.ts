@@ -3,9 +3,22 @@
 import { createClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
 
-export async function clockIn(userId: string, officeId: string) {
+export async function clockIn(userId: string, office: { value: string, isCustomValue: boolean }) {
   const supabase = createClient()
   const now = new Date()
+
+  let officeId = office.value
+  if (office.isCustomValue) {
+    const { error, data } = await supabase.from("offices").insert({ 
+      name: office.value, 
+      is_visible: false 
+    }).select("id").single()
+
+    if (error) {
+      return { error: error.message }
+    }
+    officeId = data.id
+  }
 
   // Sprawdź czy nie ma już aktywnej sesji
   const { data: existingSession } = await supabase
@@ -72,7 +85,8 @@ export async function clockOut(userId: string) {
   return { success: true }
 }
 
-export async function setManualWorkHours(userId: string, date: string, startTime: string, endTime: string, officeId: string) {
+export async function setManualWorkHours(userId: string, date: string, startTime: string, endTime: string, office: { value: string, isCustomValue: boolean }) {
+
   const supabase = createClient()
 
   const selectedDate = new Date(date)
@@ -93,6 +107,19 @@ export async function setManualWorkHours(userId: string, date: string, startTime
   const end = new Date(`${date}T${endTime}`)
   const totalHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60)
 
+  let officeId = office.value
+  if (office.isCustomValue) {
+    const { error, data } = await supabase.from("offices").insert({ 
+      name: office.value, 
+      is_visible: false 
+    }).select("id").single()
+
+    if (error) {
+      return { error: error.message }
+    }
+    officeId = data.id
+  }
+
   const { error } = await supabase.from("work_hours").insert({
     user_id: userId,
     date: date,
@@ -110,7 +137,7 @@ export async function setManualWorkHours(userId: string, date: string, startTime
   return { success: true }
 }
 
-export async function updateWorkHours(workHourId: string, startTime: string, endTime: string, officeId: string) {
+export async function updateWorkHours(workHourId: string, startTime: string, endTime: string, office: { value: string, isCustomValue: boolean }) {
   const supabase = createClient()
 
   // Formatujemy czas do formatu HH:mm:ss
@@ -121,6 +148,19 @@ export async function updateWorkHours(workHourId: string, startTime: string, end
   const start = new Date(`2000-01-01T${formattedStartTime}`)
   const end = new Date(`2000-01-01T${formattedEndTime}`)
   const totalHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60)
+
+  let officeId = office.value
+  if (office.isCustomValue) {
+    const { error, data } = await supabase.from("offices").insert({ 
+      name: office.value, 
+      is_visible: false 
+    }).select("id").single()
+
+    if (error) {
+      return { error: error.message }
+    }
+    officeId = data.id
+  }
 
   const { error } = await supabase
     .from("work_hours")

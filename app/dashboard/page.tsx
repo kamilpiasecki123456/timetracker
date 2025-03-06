@@ -31,7 +31,7 @@ export default async function DashboardPage({
 
   const { data: workHours } = await supabase
     .from("work_hours")
-    .select("*")
+    .select("*, offices(name)")
     .eq("user_id", user.id)
     .gte("date", format(monthStart, "yyyy-MM-dd"))
     .lte("date", format(monthEnd, "yyyy-MM-dd"))

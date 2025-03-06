@@ -6,12 +6,10 @@ import { format, eachDayOfInterval } from "date-fns"
 import type { Database } from "@/types/database.types"
 
 type WorkHour = Database["public"]["Tables"]["work_hours"]["Row"]
-type Office = Database["public"]["Tables"]["offices"]["Row"]
 
 interface PrintWorkHoursProps {
   employeeName: string
   workHours: WorkHour[]
-  offices: Office[]
   dateRange: {
     from: Date
     to: Date
@@ -19,7 +17,7 @@ interface PrintWorkHoursProps {
 }
 
 export const PrintWorkHours = React.forwardRef<HTMLDivElement, PrintWorkHoursProps>(
-  ({ employeeName, workHours, dateRange, offices }, ref) => {
+  ({ employeeName, workHours, dateRange }, ref) => {
     // Generuj tablicę wszystkich dni w zakresie
     const allDays = eachDayOfInterval({
       start: dateRange.from,

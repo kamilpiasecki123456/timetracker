@@ -40,7 +40,7 @@ export default async function EmployeeDetailsPage({
 
   const { data: workHours } = await supabase
     .from("work_hours")
-    .select("*")
+    .select("*, offices(name)")
     .eq("user_id", params.id)
     .gte("date", format(fromDate, "yyyy-MM-dd"))
     .lte("date", format(toDate, "yyyy-MM-dd"))

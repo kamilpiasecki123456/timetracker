@@ -26,6 +26,7 @@ import { Calendar } from "@/components/ui/calendar"
 import { cn } from "@/lib/utils"
 import { PrintWorkHours } from "@/components/print-work-hours"
 import { useReactToPrint } from "react-to-print"
+import { Combobox } from "@/components/ui/combobox"
 
 type WorkHour = Database["public"]["Tables"]["work_hours"]["Row"]
 type User = Database["public"]["Tables"]["users"]["Row"]
@@ -92,7 +93,7 @@ export function EmployeeDetailsClient({ employee, workHours, offices, statistics
   const [editingWorkHourId, setEditingWorkHourId] = useState("")
   const [manualStartTime, setManualStartTime] = useState("")
   const [manualEndTime, setManualEndTime] = useState("")
-  const [selectedOfficeId, setSelectedOfficeId] = useState<string>("00000000-0000-0000-0000-000000000000")
+  const [selectedOffice, setSelectedOffice] = useState<{ value: string, isCustomValue: boolean } | null>(null)
   const router = useRouter()
   const { toast } = useToast()
 
@@ -137,7 +138,7 @@ export function EmployeeDetailsClient({ employee, workHours, offices, statistics
     setManualEndTime(formattedEndTime)
     setEditingWorkHourId(workHourId)
     setIsDialogOpen(true)
-    setSelectedOfficeId(officeId)
+    setSelectedOffice({ value: officeId, isCustomValue: false })
   }
 
   const handleWorkHours = async (e: React.FormEvent) => {
@@ -165,7 +166,7 @@ export function EmployeeDetailsClient({ employee, workHours, offices, statistics
         return
       }
 
-      const result = await updateWorkHours(editingWorkHourId, manualStartTime, manualEndTime, selectedOfficeId)
+      const result = await updateWorkHours(editingWorkHourId, manualStartTime, manualEndTime, selectedOffice)
 
       if (result.error) {
         throw new Error(result.error)
@@ -178,7 +179,7 @@ export function EmployeeDetailsClient({ employee, workHours, offices, statistics
       setIsDialogOpen(false)
       setEditingDate("")
       setEditingWorkHourId("")
-      setSelectedOfficeId("00000000-0000-0000-0000-000000000000")
+      setSelectedOffice(null)
       router.refresh()
     } catch (error) {
       toast({
@@ -399,7 +400,7 @@ export function EmployeeDetailsClient({ employee, workHours, offices, statistics
                                     {session.start_time} - {session.end_time || "w trakcie"}
                                   </span>
                                   <span className="text-sm text-muted-foreground">({session.total_hours}h)</span>
-                                  <span className="text-sm">- {offices.find((office) => office.id === session.office_id)?.name ?? "null"}</span>
+                                  <span className="text-sm">- {session.offices.name ?? "null"}</span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                   <Button
@@ -445,7 +446,6 @@ export function EmployeeDetailsClient({ employee, workHours, offices, statistics
               from: date?.from || new Date(),
               to: date?.to || new Date(),
             }}
-            offices={offices}
           />
         </div>
 
@@ -493,18 +493,18 @@ export function EmployeeDetailsClient({ employee, workHours, offices, statistics
                   <Label htmlFor="end-time" className="text-right">
                     Localización
                   </Label>
-                  <Select  required value={selectedOfficeId} onValueChange={(value) => setSelectedOfficeId(value)}>
-                    <SelectTrigger className="col-span-3">
-                      <SelectValue placeholder="Localización" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {offices.map((office) => (
-                        <SelectItem key={office.id} value={office.id}>
-                          {office.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Combobox
+                    options={offices.map((office) => ({
+                      value: office.id,
+                      label: office.name,
+                    }))}
+                    value={selectedOffice?.value ?? ""}
+                    onValueChange={(value, isCustomValue) => setSelectedOffice({ value, isCustomValue })}
+                    placeholder="Seleccione o introduzca una ubicación"
+                    emptyText="No se encontraron ubicaciones."
+                    allowCustomValue={true}
+                    className="w-full col-span-3"
+                  />
                 </div>
               </div>
               <DialogFooter>
