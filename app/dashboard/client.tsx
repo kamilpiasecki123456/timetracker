@@ -34,6 +34,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils"
 import { Combobox } from "@/components/ui/combobox"
 import { isRSCRequestCheck } from "next/dist/server/base-server"
+import { PWAInstallPrompt } from "@/components/pwa-install-prompt"
 
 type WorkHour = Database["public"]["Tables"]["work_hours"]["Row"]
 type User = Database["public"]["Tables"]["users"]["Row"]
@@ -642,6 +643,7 @@ export function DashboardClient({ user, workHours, todayWorkHours, statistics, s
         </div>
       </div>
       </main>
+      <PWAInstallPrompt />
     </div>
   )
 }
