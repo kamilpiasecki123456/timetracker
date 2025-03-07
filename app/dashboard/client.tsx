@@ -569,7 +569,7 @@ export function DashboardClient({ user, workHours, todayWorkHours, statistics, s
               <CardDescription>Lista detallada de horas de trabajo en el mes seleccionado</CardDescription>
             </CardHeader>
             <CardContent className="px-4 md:px-6">
-              <Table>
+              <Table className="hidden md:table">
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-[200px]">Fecha</TableHead>
@@ -638,6 +638,73 @@ export function DashboardClient({ user, workHours, todayWorkHours, statistics, s
                     ))}
                 </TableBody>
               </Table>
+              <div>
+              <div className="md:hidden">
+              {Object.entries(workHours)
+                    .sort(([dateA], [dateB]) => new Date(dateB).getTime() - new Date(dateA).getTime())
+                    .map(([date, dayData]) => (
+                      <div key={date} className="flex flex-col gap-4 py-2">
+                        <div className="flex justify-between">
+                        <div className="font-medium align-top">
+                          {format(new Date(date), "d MMMM (EEEE)", { locale: es })}
+                        </div>
+                        <div className="text-right align-top font-medium">{dayData.total_hours}h</div>
+                        </div>
+                        <div>
+                          <div className="space-y-2">
+                            {dayData.sessions.map((session, index) => {
+                              return (
+                                <div
+                                  key={session.id}
+                                  className="flex items-center justify-between bg-muted/50 p-2 rounded-md"
+                                >
+                                  <div className="flex flex-col gap-2">
+                                    <div className="text-sm font-medium">Sesión {index + 1}:</div>
+                                    <div className="flex items-center">
+                                      <span className="text-sm">
+                                        {session.start_time} - {session.end_time || "durante"}
+                                      </span>
+                                      <span className="text-sm text-muted-foreground">({session.total_hours}h)</span>
+                                      <span className="text-sm">- {session.offices.name ?? "null"}</span>
+                                    </div>
+                                  </div>
+                                  {isWithinInterval(new Date(session.date), {
+                                    start: startOfDay(subDays(new Date(), 30)),
+                                    end: endOfDay(new Date())
+                                  }) && (
+                                    <div className="flex">
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="ml-2"
+                                        onClick={() =>
+                                          handleEdit(date, session.start_time, session.end_time || "", session.id, session.office_id)
+                                        }
+                                      >
+                                        <PencilLine className="h-4 w-4" />
+                                        <span className="sr-only">Editar sesión</span>
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-8 w-8 p-0 hover:text-destructive"
+                                        onClick={() => handleDeleteSession(session.id)}
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                        <span className="sr-only">Borrar sesión</span>
+                                      </Button>
+                                    </div>
+                                  )}
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+                        
+                      </div>
+                    ))}
+              </div>
+              </div>
             </CardContent>
           </Card>
         </div>

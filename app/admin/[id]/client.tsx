@@ -224,13 +224,13 @@ export function EmployeeDetailsClient({ employee, workHours, offices, statistics
     <div className="min-h-screen bg-gray-50 p-4">
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
-          <Link href="/admin">
+          <Link className="-ml-4" href="/admin">
             <Button variant="ghost" className="mb-4">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Volver a la lista de empleados
             </Button>
           </Link>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col md:flex-row gap-4 md:items-center justify-between">
             <div className="flex flex-col gap-2">
               <h1 className="text-2xl font-bold">{employee.full_name}</h1>
               <p className="text-muted-foreground">{employee.email}</p>
@@ -322,7 +322,7 @@ export function EmployeeDetailsClient({ employee, workHours, offices, statistics
           </div>
 
           {/* Wykres */}
-          <Card>
+          <Card className="hidden md:block">
             <CardHeader>
               <CardTitle>Horario de trabajo</CardTitle>
               <CardDescription>Horas trabajadas al mes</CardDescription>
@@ -355,7 +355,7 @@ export function EmployeeDetailsClient({ employee, workHours, offices, statistics
               </Button>
             </CardHeader>
             <CardContent>
-              <Table>
+              <Table className="hidden md:table">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Fecha</TableHead>
@@ -433,6 +433,79 @@ export function EmployeeDetailsClient({ employee, workHours, offices, statistics
                     ))}
                 </TableBody>
               </Table>
+              <div className="block md:hidden">
+              {Object.entries(
+                    workHours.reduce(
+                      (acc, workHour) => {
+                        const date = workHour.date
+                        if (!acc[date]) {
+                          acc[date] = {
+                            sessions: [],
+                            totalHours: 0,
+                          }
+                        }
+                        acc[date].sessions.push(workHour)
+                        acc[date].totalHours += workHour.total_hours || 0
+                        return acc
+                      },
+                      {} as { [key: string]: { sessions: typeof workHours; totalHours: number } },
+                    ),
+                  )
+                    .sort(([dateA], [dateB]) => new Date(dateB).getTime() - new Date(dateA).getTime())
+                    .map(([date, dayData]) => (
+                      <div key={date} className="flex flex-col gap-4 py-2">
+                        <div className="flex justify-between items-center">
+                          <div className="font-medium align-top">
+                            {format(new Date(date), "d MMMM (EEEE)", { locale: es })}
+                          </div>
+                          <div className="text-right align-top font-medium">{dayData.totalHours.toFixed(2)}h</div>
+                        </div>
+                        <div>
+                          <div className="space-y-2">
+                            {dayData.sessions.map((session, index) => (
+                              <div
+                                key={session.id}
+                                className="flex items-center justify-between bg-muted/50 p-2 rounded-md"
+                              >
+                                <div className="flex flex-col gap-2">
+                                    <div className="text-sm font-medium">Sesión {index + 1}:</div>
+                                    <div className="flex items-center">
+                                      <span className="text-sm">
+                                        {session.start_time} - {session.end_time || "durante"}
+                                      </span>
+                                      <span className="text-sm text-muted-foreground">({session.total_hours}h)</span>
+                                      <span className="text-sm">- {session.offices.name ?? "null"}</span>
+                                    </div>
+                                  </div>
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 w-8 p-0"
+                                    onClick={() =>
+                                      handleEdit(date, session.start_time, session.end_time || "", session.id, session.office_id)
+                                    }
+                                  >
+                                    <PencilLine className="h-4 w-4" />
+                                    <span className="sr-only">Editar sesión</span>
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 w-8 p-0 hover:text-destructive"
+                                    onClick={() => handleDeleteSession(session.id)}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                    <span className="sr-only">Borrar sesión</span>
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+              </div>
             </CardContent>
           </Card>
         </div>
