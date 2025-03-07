@@ -15,16 +15,16 @@ export function MobileNav({ isAdmin, currentPath }: MobileNavProps) {
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="md:hidden">
+        <Button variant="ghost" size="icon" className="ml-2 md:hidden">
           <Menu className="h-5 w-5" />
           <span className="sr-only">Toggle menu</span>
         </Button>
       </SheetTrigger>
-      <SheetContent side="left">
+      <SheetContent side="left" className="px-0">
         <SheetHeader>
           <SheetTitle>Menu</SheetTitle>
         </SheetHeader>
-        <div className="mt-4 flex flex-col gap-4">
+        <div className="mt-4 flex flex-col justify-between gap-4">
           {isAdmin && currentPath === "dashboard" && (
             <Link href="/admin">
               <Button variant="ghost" className="w-full justify-start">

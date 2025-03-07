@@ -297,9 +297,9 @@ export function DashboardClient({ user, workHours, todayWorkHours, statistics, s
     <div className="min-h-screen bg-gray-50 ">
       <header className="sticky top-0 z-40 border-b bg-background">
         <div className="container mx-auto flex h-16 items-center justify-between py-4">
-          <div className="flex gap-4 items-center">
-            <h1 className="text-2xl font-bold hidden md:block">Panel de empleados</h1>
-            <div className="md:hidden">
+          <div className="flex md:gap-4 items-center">
+            <h1 className="text-xl md:text-2xl ml-2 md:ml-0 font-bold order-2 md:order-1">Panel de empleados</h1>
+            <div className="md:hidden order-1 md:order-2">
               <MobileNav isAdmin={user.role === "admin"} currentPath="dashboard" />
             </div>
           </div>
@@ -324,11 +324,11 @@ export function DashboardClient({ user, workHours, todayWorkHours, statistics, s
         <div className="grid gap-6 md:grid-cols-12">
           {/* Time Tracking Controls */}
           <Card className="md:col-span-4">
-            <CardHeader>
+            <CardHeader className="px-4 md:px-6">
               <CardTitle>Registro horario</CardTitle>
               <CardDescription>Gestione su tiempo de trabajo</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 px-4 md:px-6">
               {!todayWorkHours.hasActiveSession && (
                 <>
                   
@@ -506,11 +506,11 @@ export function DashboardClient({ user, workHours, todayWorkHours, statistics, s
 
           {/* Statistics */}
           <Card className="md:col-span-8">
-            <CardHeader>
+            <CardHeader className="px-4 md:px-6">
               <CardTitle>Estadísticas laborales</CardTitle>
               <CardDescription>Resumen de la jornada laboral</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-4 md:px-6">
               <div className="grid gap-4 md:grid-cols-3">
                 <div className="space-y-2">
                   <p className="text-sm font-medium">Esta semana</p>
@@ -532,8 +532,8 @@ export function DashboardClient({ user, workHours, todayWorkHours, statistics, s
           </Card>
 
           {/* Work Hours Chart */}
-          <Card className="md:col-span-12 overflow-auto">
-            <CardHeader>
+          <Card className="hidden md:block md:col-span-12 overflow-auto">
+            <CardHeader className="px-4 md:px-6">
               <div className="flex flex-col md:flex-row gap-4 md:items-center justify-between">
                 <CardTitle>Horario de trabajo</CardTitle>
                 <div className="flex items-center gap-2">
@@ -549,7 +549,7 @@ export function DashboardClient({ user, workHours, todayWorkHours, statistics, s
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="overflow-auto">
+            <CardContent className="overflow-auto px-4 md:px-6">
               <div className="h-[400px] mt-4">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={chartData}>
@@ -564,11 +564,11 @@ export function DashboardClient({ user, workHours, todayWorkHours, statistics, s
             </CardContent>
           </Card>
           <Card className="md:col-span-12 overflow-auto">
-            <CardHeader>
+            <CardHeader className="px-4 md:px-6">
               <CardTitle>Historial laboral - {format(currentMonth, "LLLL yyyy", { locale: es })}</CardTitle>
               <CardDescription>Lista detallada de horas de trabajo en el mes seleccionado</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-4 md:px-6">
               <Table>
                 <TableHeader>
                   <TableRow>

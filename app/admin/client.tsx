@@ -31,9 +31,9 @@ export function AdminDashboardClient({ employees }: AdminDashboardClientProps) {
     <div className="min-h-screen bg-gray-50">
       <header className="sticky top-0 z-40 border-b bg-background">
         <div className="container mx-auto flex h-16 items-center justify-between py-4">
-          <div className="flex gap-4 items-center">
-            <h1 className="text-2xl font-bold hidden md:block">Admin Panel</h1>
-            <div className="md:hidden">
+          <div className="flex md:gap-4 items-center">
+            <h1 className="text-xl md:text-2xl ml-2 md:ml-0 font-bold order-2 md:order-1">Panel de administración </h1>
+            <div className="md:hidden order-1 md:order-2">
               <MobileNav isAdmin={true} currentPath="admin" />
             </div>
           </div>
