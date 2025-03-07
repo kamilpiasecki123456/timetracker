@@ -428,7 +428,7 @@ export function EmployeeDetailsClient({ employee, workHours, offices, statistics
                             ))}
                           </div>
                         </TableCell>
-                        <TableCell className="text-right align-top font-medium">{dayData.totalHours}h</TableCell>
+                        <TableCell className="text-right align-top font-medium">{dayData.totalHours.toFixed(2)}h</TableCell>
                       </TableRow>
                     ))}
                 </TableBody>

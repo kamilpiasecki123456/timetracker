@@ -85,7 +85,7 @@ export function AdminDashboardClient({ employees }: AdminDashboardClientProps) {
                           ? `${employee.todayHours.start} - ${employee.todayHours.end || "En"}`
                           : "Sin entrada"}
                       </TableCell>
-                      <TableCell>{employee.totalWeekHours}h</TableCell>
+                      <TableCell>{employee.totalWeekHours.toFixed(2)}h</TableCell>
                       <TableCell>
                         <Link href={`/admin/${employee.id}`}>
                           <Button variant="ghost" size="sm">
