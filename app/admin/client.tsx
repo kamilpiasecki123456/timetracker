@@ -34,7 +34,7 @@ export function AdminDashboardClient({ employees }: AdminDashboardClientProps) {
           <div className="flex gap-4 items-center">
             <h1 className="text-2xl font-bold hidden md:block">Admin Panel</h1>
             <div className="md:hidden">
-              <MobileNav isAdmin={true} currentPath="dashboard" />
+              <MobileNav isAdmin={true} currentPath="admin" />
             </div>
           </div>
           <div className="flex items-center gap-4">
